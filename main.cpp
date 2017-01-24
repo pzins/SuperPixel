@@ -41,46 +41,76 @@ int main(int argc, char *argv[])
     }
 //    for(auto i : cooSuperPixel)
 //        printCoo(i);
-    cv::Mat res(img.rows, img.cols, CV_8UC1);
     cv::Mat sp(img.rows, img.cols, CV_8UC1);
     std::vector<cv::Vec3b> superPixel;
+    std::vector<std::vector<Coo>> superPixelElements;
     for(auto i : cooSuperPixel)
         superPixel.push_back(img.at<cv::Vec3b>(i.x_, i.y_));
-
-    for(int i = 0; i < img.rows; ++i)
+    for(auto i : superPixel)
     {
-        for(int j = 0; j < img.cols; ++j)
+        std::vector<Coo> tmp;
+        superPixelElements.push_back(tmp);
+    }
+    for(int a = 0; a < 10; ++a){
+        cv::Mat res(img.rows, img.cols, CV_8UC1);
+
+        for(int i = 0; i < img.rows; ++i)
         {
-            int centroide = -1;
-            int mini_dist = 10000000;
-            for(int k = 0; k < superPixel.size(); ++k)
+            for(int j = 0; j < img.cols; ++j)
             {
-                Coo c;
-                c.x_ = i;
-                c.y_ = j;
-                int dist = distance(img.at<cv::Vec3b>(i,j), c, superPixel.at(k), cooSuperPixel.at(k));
-                if(dist < mini_dist)
+                int centroide = -1;
+                int mini_dist = 10000000;
+                for(int k = 0; k < superPixel.size(); ++k)
                 {
-                    centroide = k;
-                    mini_dist = dist;
+                    Coo c;
+                    c.x_ = i;
+                    c.y_ = j;
+                    int dist = distance(img.at<cv::Vec3b>(i,j), c, superPixel.at(k), cooSuperPixel.at(k));
+                    if(dist < mini_dist)
+                    {
+                        centroide = k;
+                        mini_dist = dist;
+                    }
                 }
+                sp.at<uchar>(i,j) = centroide;
+                Coo tmp;
+                tmp.x_ = i;
+                tmp.y_ = j;
+                superPixelElements.at(centroide).push_back(tmp);
             }
-            sp.at<uchar>(i,j) = centroide;
         }
-    }
-
-    for(int i = 0; i < sp.rows; ++i)
-    {
-        for(int j = 0; j < sp.cols; ++j)
+        for(int i = 0; i < sp.rows; ++i)
         {
-//            std::cout <<  int(sp.at<uchar>(i,j)) << std::endl;
-            int intensite = 255*(float(sp.at<uchar>(i,j))/64);
-//            std::cout << intensite << std::endl;
-            res.at<uchar>(i,j) = intensite;
+            for(int j = 0; j < sp.cols; ++j)
+            {
+    //            std::cout <<  int(sp.at<uchar>(i,j)) << std::endl;
+                int intensite = 255*(float(sp.at<uchar>(i,j))/64);
+    //            std::cout << intensite << std::endl;
+                res.at<uchar>(i,j) = intensite;
+            }
         }
+
+        for(int i = 0; i < superPixelElements.size(); ++i){
+            double newx=0, newy=0;
+            for(auto ele : superPixelElements.at(i))
+            {
+                newx += ele.x_;
+                newy += ele.y_;
+            }
+            if(newx != 0 && newy != 0) {
+            newx /= superPixelElements.at(i).size();
+            newy /= superPixelElements.at(i).size();
+            Coo tmp;
+            tmp.x_ = newx;
+            tmp.y_ = newy;
+            cooSuperPixel.at(i) = tmp;
+            superPixel.at(i) = img.at<cv::Vec3b>(tmp.x_, tmp.y_);
+            }
+        }
+        std::string numero = std::to_string(a);
+        cv::namedWindow( "res_"+numero);
+        cv::imshow( "res_"+numero, res);
     }
-    cv::namedWindow( "res");
-    cv::imshow( "res", res);
     cv::waitKey(0);
     return 0;
 }
