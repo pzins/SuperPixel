@@ -41,6 +41,7 @@ int main(int argc, char *argv[])
     }
 //    for(auto i : cooSuperPixel)
 //        printCoo(i);
+    cv::Mat res(img.rows, img.cols, CV_8UC3);
     cv::Mat sp(img.rows, img.cols, CV_8UC1);
     std::vector<cv::Vec3b> superPixel;
     std::vector<std::vector<Coo>> superPixelElements;
@@ -51,8 +52,7 @@ int main(int argc, char *argv[])
         std::vector<Coo> tmp;
         superPixelElements.push_back(tmp);
     }
-    for(int a = 0; a < 10; ++a){
-        cv::Mat res(img.rows, img.cols, CV_8UC1);
+    for(int a = 0; a < 2; ++a){
 
         for(int i = 0; i < img.rows; ++i)
         {
@@ -84,9 +84,9 @@ int main(int argc, char *argv[])
             for(int j = 0; j < sp.cols; ++j)
             {
     //            std::cout <<  int(sp.at<uchar>(i,j)) << std::endl;
-                int intensite = 255*(float(sp.at<uchar>(i,j))/64);
+                cv::Vec3b intensite(255*(float(sp.at<uchar>(i,j))/64),0,0);
     //            std::cout << intensite << std::endl;
-                res.at<uchar>(i,j) = intensite;
+                res.at<cv::Vec3b>(i,j) = intensite;
             }
         }
 
