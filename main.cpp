@@ -8,15 +8,27 @@
 using namespace std;
 
 struct Coo {
-    int x_;
-    int y_;
+    int x;
+    int y;
+    Coo(int _x, int _y){x = _x; y = _y;}
 };
-void printCoo(Coo c){std::cout << c.x_ << " " << c.y_ << std::endl;}
+void printCoo(Coo c){std::cout << c.x << " " << c.y << std::endl;}
+
+
+class SuperPixel
+{
+private:
+    Coo coordonnees;
+    cv::Vec3b intensite;
+public:
+    SuperPixel(Coo _coordonnees, cv::Vec3b  _intensite) : coordonnees(_coordonnees), intensite(_intensite){}
+    SuperPixel(int _x, int _y, cv::Vec3b _intensite) : intensite(_intensite), coordonnees(Coo(_x, _y)){}
+};
 
 
 int distance(cv::Vec3b pix1, Coo coo1, cv::Vec3b pix2, Coo coo2){
 
-    float dist_spatiale = sqrt(pow(coo2.x_ - coo1.x_, 2) + pow(coo2.y_ - coo1.x_,2));
+    float dist_spatiale = sqrt(pow(coo2.x - coo1.x, 2) + pow(coo2.y - coo1.x,2));
     float dist_color = sqrt(pow(pix1.val[0] - pix2.val[0],2) + pow(pix1.val[1] - pix2.val[1],2) + pow(pix1.val[2] - pix2.val[2],2));
     return dist_color + dist_spatiale;
 }
@@ -33,9 +45,7 @@ int main(int argc, char *argv[])
         for(int j = 0; j < sqrt(nbSuperPixel); ++j){
             int length_x = int(img.cols / sqrt(nbSuperPixel));
             int length_y = int(img.rows / sqrt(nbSuperPixel));
-            Coo c;
-            c.x_ = (i+1)*length_x;
-            c.y_ = (j+1)*length_y;
+            Coo c((i+1)*length_x, c.y = (j+1)*length_y);
             cooSuperPixel.push_back(c);
         }
     }
@@ -46,7 +56,7 @@ int main(int argc, char *argv[])
     std::vector<cv::Vec3b> superPixel;
     std::vector<std::vector<Coo>> superPixelElements;
     for(auto i : cooSuperPixel)
-        superPixel.push_back(img.at<cv::Vec3b>(i.x_, i.y_));
+        superPixel.push_back(img.at<cv::Vec3b>(i.x, i.y));
     for(auto i : superPixel)
     {
         std::vector<Coo> tmp;
@@ -62,9 +72,7 @@ int main(int argc, char *argv[])
                 int mini_dist = 10000000;
                 for(int k = 0; k < superPixel.size(); ++k)
                 {
-                    Coo c;
-                    c.x_ = i;
-                    c.y_ = j;
+                    Coo c(i, j);
                     int dist = distance(img.at<cv::Vec3b>(i,j), c, superPixel.at(k), cooSuperPixel.at(k));
                     if(dist < mini_dist)
                     {
@@ -73,9 +81,7 @@ int main(int argc, char *argv[])
                     }
                 }
                 sp.at<uchar>(i,j) = centroide;
-                Coo tmp;
-                tmp.x_ = i;
-                tmp.y_ = j;
+                Coo tmp(i, j);
                 superPixelElements.at(centroide).push_back(tmp);
             }
         }
@@ -94,17 +100,15 @@ int main(int argc, char *argv[])
             double newx=0, newy=0;
             for(auto ele : superPixelElements.at(i))
             {
-                newx += ele.x_;
-                newy += ele.y_;
+                newx += ele.x;
+                newy += ele.y;
             }
             if(newx != 0 && newy != 0) {
             newx /= superPixelElements.at(i).size();
             newy /= superPixelElements.at(i).size();
-            Coo tmp;
-            tmp.x_ = newx;
-            tmp.y_ = newy;
+            Coo tmp(newx, newy);
             cooSuperPixel.at(i) = tmp;
-            superPixel.at(i) = img.at<cv::Vec3b>(tmp.x_, tmp.y_);
+            superPixel.at(i) = img.at<cv::Vec3b>(tmp.x, tmp.y);
             }
         }
         std::string numero = std::to_string(a);
