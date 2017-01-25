@@ -14,15 +14,45 @@ struct Coo {
 };
 void printCoo(Coo c){std::cout << c.x << " " << c.y << std::endl;}
 
-
-class SuperPixel
+class Pixel
 {
-private:
+protected:
     Coo coordonnees;
     cv::Vec3b intensite;
 public:
-    SuperPixel(Coo _coordonnees, cv::Vec3b  _intensite) : coordonnees(_coordonnees), intensite(_intensite){}
-    SuperPixel(int _x, int _y, cv::Vec3b _intensite) : intensite(_intensite), coordonnees(Coo(_x, _y)){}
+    Pixel(Coo _coordonnees, cv::Vec3b _intensite) : coordonnees(_coordonnees), intensite(_intensite){}
+    const Coo getCoordonnees(){return coordonnees;}
+    const cv::Vec3b getIntensite(){return intensite;}
+};
+
+class SuperPixel : public Pixel
+{
+private:
+    std::vector<Pixel> pixels;
+public:
+    SuperPixel(Coo _coordonnees, cv::Vec3b  _intensite) : Pixel(_coordonnees, _intensite){}
+    int operator-(Pixel _pixel) {
+        float dist_spatiale = sqrt(pow(_pixel.getCoordonnees().x - coordonnees.x, 2) + pow(_pixel.getCoordonnees().y - coordonnees.y,2));
+        float dist_color = sqrt(pow(_pixel.getIntensite().val[0] - intensite.val[0],2) + pow(_pixel.getIntensite().val[1] - intensite.val[1],2)
+                + pow(_pixel.getIntensite().val[2] - intensite.val[2],2));
+        return dist_color + dist_spatiale;
+    }
+    void addPixel(Pixel _pix){pixels.push_back(_pix);}
+    void update(cv::Mat& _img){
+        float newx = 0, newy = 0;
+        for(auto i : pixels)
+        {
+            newx += i.getCoordonnees().x;
+            newy += i.getCoordonnees().y;
+        }
+        newx /= pixels.size();
+        newy /= pixels.size();
+        coordonnees.x = newx;
+        coordonnees.y = newy;
+        pixels.clear();
+        intensite = _img.at<cv::Vec3b>(coordonnees.x, coordonnees.y);
+    }
+
 };
 
 
@@ -33,47 +63,46 @@ int distance(cv::Vec3b pix1, Coo coo1, cv::Vec3b pix2, Coo coo2){
     return dist_color + dist_spatiale;
 }
 
+std::vector<SuperPixel*> sp_vec;
+
 int main(int argc, char *argv[])
 {
 
-    cv::Mat img = cv::imread("lyon.jpg");
-    std::cout << img.rows << " " << img.cols << std::endl;
+    cv::Mat img = cv::imread("montagne.jpg");
     int nbSuperPixel = 144; //sqrt(nbSuperPixel) doit être entier
-    std::vector<Coo> cooSuperPixel;
+    int dx = int(img.cols / sqrt(nbSuperPixel));
+    int dy = int(img.rows / sqrt(nbSuperPixel));
+    std::vector<Coo> cooSuperPixel; // a suppr
+    //computer superpixel points (coo + intensite)
     for(int i = 0; i < sqrt(nbSuperPixel); ++i)
     {
         for(int j = 0; j < sqrt(nbSuperPixel); ++j){
-            int length_x = int(img.cols / sqrt(nbSuperPixel));
-            int length_y = int(img.rows / sqrt(nbSuperPixel));
-            Coo c((i+1)*length_x, c.y = (j+1)*length_y);
-            cooSuperPixel.push_back(c);
+            SuperPixel* tmp = new SuperPixel(Coo((i+1)*dx,(j+1)*dy), img.at<cv::Vec3b>((i+1)*dx, (j+1)*dy));
+            sp_vec.push_back(tmp);
         }
     }
-//    for(auto i : cooSuperPixel)
-//        printCoo(i);
-    cv::Mat res(img.rows, img.cols, CV_8UC3);
-    cv::Mat sp(img.rows, img.cols, CV_8UC1);
-    std::vector<cv::Vec3b> superPixel;
-    std::vector<std::vector<Coo>> superPixelElements;
-    for(auto i : cooSuperPixel)
-        superPixel.push_back(img.at<cv::Vec3b>(i.x, i.y));
-    for(auto i : superPixel)
-    {
-        std::vector<Coo> tmp;
-        superPixelElements.push_back(tmp);
-    }
-    for(int a = 0; a < 2; ++a){
 
+    cv::Mat res(img.rows, img.cols, CV_8UC3); //matrice resultat pr l'affichage
+    cv::Mat sp(img.rows, img.cols, CV_8UC1); //matrice image avec value = indice du superpixel associé
+
+
+
+    for(int a = 0; a < 10; ++a)
+    {
+        //loop over image
+        //compute sp : with superpixel index for each pixel
+        //and add this pixel to its associated superpixel
         for(int i = 0; i < img.rows; ++i)
         {
             for(int j = 0; j < img.cols; ++j)
             {
                 int centroide = -1;
                 int mini_dist = 10000000;
-                for(int k = 0; k < superPixel.size(); ++k)
+                //loop over superpixels
+                for(int k = 0; k < sp_vec.size(); ++k)
                 {
-                    Coo c(i, j);
-                    int dist = distance(img.at<cv::Vec3b>(i,j), c, superPixel.at(k), cooSuperPixel.at(k));
+                    Pixel p(Coo(i,j), img.at<cv::Vec3b>(i,j));
+                    int dist = *sp_vec.at(k) - p;
                     if(dist < mini_dist)
                     {
                         centroide = k;
@@ -81,35 +110,23 @@ int main(int argc, char *argv[])
                     }
                 }
                 sp.at<uchar>(i,j) = centroide;
-                Coo tmp(i, j);
-                superPixelElements.at(centroide).push_back(tmp);
+                sp_vec.at(centroide)->addPixel(Pixel(Coo(i,j), img.at<cv::Vec3b>(i,j)));
             }
         }
+
         for(int i = 0; i < sp.rows; ++i)
         {
             for(int j = 0; j < sp.cols; ++j)
             {
-    //            std::cout <<  int(sp.at<uchar>(i,j)) << std::endl;
-                cv::Vec3b intensite(255*(float(sp.at<uchar>(i,j))/64),0,0);
-    //            std::cout << intensite << std::endl;
+                //egalisation des intensités des regions pr chaque superpixel
+                cv::Vec3b intensite(255*(float(sp.at<uchar>(i,j))/nbSuperPixel),0,0);
                 res.at<cv::Vec3b>(i,j) = intensite;
             }
         }
 
-        for(int i = 0; i < superPixelElements.size(); ++i){
-            double newx=0, newy=0;
-            for(auto ele : superPixelElements.at(i))
-            {
-                newx += ele.x;
-                newy += ele.y;
-            }
-            if(newx != 0 && newy != 0) {
-            newx /= superPixelElements.at(i).size();
-            newy /= superPixelElements.at(i).size();
-            Coo tmp(newx, newy);
-            cooSuperPixel.at(i) = tmp;
-            superPixel.at(i) = img.at<cv::Vec3b>(tmp.x, tmp.y);
-            }
+
+        for(auto i : sp_vec){
+                i->update(img);
         }
         std::string numero = std::to_string(a);
         cv::namedWindow( "res_"+numero);
