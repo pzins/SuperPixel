@@ -1,3 +1,3 @@
 # SuperPixel
 SuperPixel segmentation
-method SLIC
+## method SLIC
