@@ -29,8 +29,9 @@ class SuperPixel : public Pixel
 {
 private:
     std::vector<Pixel> pixels;
+    cv::Vec3b meancolor;
 public:
-    SuperPixel(Coo _coordonnees, cv::Vec3b  _intensite) : Pixel(_coordonnees, _intensite){}
+    SuperPixel(Coo _coordonnees, cv::Vec3b  _intensite) : Pixel(_coordonnees, _intensite), meancolor(cv::Vec3b(0,0,0)){}
     int operator-(Pixel _pixel) {
         float dist_spatiale = sqrt(pow(_pixel.getCoordonnees().x - coordonnees.x, 2) + pow(_pixel.getCoordonnees().y - coordonnees.y,2));
         float dist_color = sqrt(pow(_pixel.getIntensite().val[0] - intensite.val[0],2) + pow(_pixel.getIntensite().val[1] - intensite.val[1],2)
@@ -45,14 +46,32 @@ public:
             newx += i.getCoordonnees().x;
             newy += i.getCoordonnees().y;
         }
-        newx /= pixels.size();
-        newy /= pixels.size();
+        if(newx != 0 && newy != 0)
+        {
+            newx /= pixels.size();
+            newy /= pixels.size();
+        }
         coordonnees.x = newx;
         coordonnees.y = newy;
         pixels.clear();
+
         intensite = _img.at<cv::Vec3b>(coordonnees.x, coordonnees.y);
     }
+    void computeMeanColor(){
+        if(pixels.size() != 0){
+            int r=0,g=0,b=0;
+            for(auto i : pixels){
+                b += i.getIntensite().val[0];
+                g += i.getIntensite().val[1];
+                r += i.getIntensite().val[2];
+            }
+            meancolor = cv::Vec3b(b/ pixels.size(), g/ pixels.size(), r/ pixels.size());
+        }
+    }
 
+    const cv::Vec3b getMeanColor() const{
+        return meancolor;
+    }
 };
 
 
@@ -68,10 +87,10 @@ std::vector<SuperPixel*> sp_vec;
 int main(int argc, char *argv[])
 {
 
-    cv::Mat img = cv::imread("montagne.jpg");
+    cv::Mat img = cv::imread("lyon.jpg");
     int nbSuperPixel = 144; //sqrt(nbSuperPixel) doit être entier
-    int dx = int(img.cols / sqrt(nbSuperPixel));
-    int dy = int(img.rows / sqrt(nbSuperPixel));
+    int dx = int(img.rows / sqrt(nbSuperPixel));
+    int dy = int(img.cols / sqrt(nbSuperPixel));
     std::vector<Coo> cooSuperPixel; // a suppr
     //computer superpixel points (coo + intensite)
     for(int i = 0; i < sqrt(nbSuperPixel); ++i)
@@ -81,7 +100,6 @@ int main(int argc, char *argv[])
             sp_vec.push_back(tmp);
         }
     }
-
     cv::Mat res(img.rows, img.cols, CV_8UC3); //matrice resultat pr l'affichage
     cv::Mat sp(img.rows, img.cols, CV_8UC1); //matrice image avec value = indice du superpixel associé
 
@@ -114,13 +132,16 @@ int main(int argc, char *argv[])
             }
         }
 
+        for(auto i : sp_vec)
+            i->computeMeanColor();
         for(int i = 0; i < sp.rows; ++i)
         {
             for(int j = 0; j < sp.cols; ++j)
             {
                 //egalisation des intensités des regions pr chaque superpixel
-                cv::Vec3b intensite(255*(float(sp.at<uchar>(i,j))/nbSuperPixel),0,0);
-                res.at<cv::Vec3b>(i,j) = intensite;
+//                cv::Vec3b intensite(255*(float(sp.at<uchar>(i,j))/nbSuperPixel),0,0);
+//                res.at<cv::Vec3b>(i,j) = intensite;
+                res.at<cv::Vec3b>(i,j) = sp_vec.at(sp.at<uchar>(i,j))->getMeanColor();
             }
         }
 
@@ -128,9 +149,27 @@ int main(int argc, char *argv[])
         for(auto i : sp_vec){
                 i->update(img);
         }
+        for(int i = 1;  i < res.rows-1; ++i)
+        {
+            for(int j = 1; j < res.cols-1; ++j)
+            {
+                int currentPixel = int(sp.at<uchar>(i,j));
+                if(currentPixel != int(sp.at<uchar>(i-1,j-1)) ||
+                    currentPixel != int(sp.at<uchar>(i-1,j)) ||
+                    currentPixel != int(sp.at<uchar>(i-1,j+1)) ||
+                    currentPixel != int(sp.at<uchar>(i,j-1)) ||
+                    currentPixel != int(sp.at<uchar>(i,j+1)) ||
+                    currentPixel != int(sp.at<uchar>(i+1,j-1)) ||
+                    currentPixel != int(sp.at<uchar>(i+1,j)) ||
+                    currentPixel != int(sp.at<uchar>(i+1,j+1)))
+                    res.at<cv::Vec3b>(i,j) = cv::Vec3b(0,0,0);
+            }
+        }
+        if(a == 0 || a == 9){
         std::string numero = std::to_string(a);
         cv::namedWindow( "res_"+numero);
         cv::imshow( "res_"+numero, res);
+        }
     }
     cv::waitKey(0);
     return 0;
