@@ -81,7 +81,7 @@ std::vector<SuperPixel*> sp_vec;
 int main(int argc, char *argv[])
 {
 
-    cv::Mat img = cv::imread("montagne.jpg");
+    cv::Mat img = cv::imread("montagne1.jpg");
     int nbSuperPixel = 100; //sqrt(nbSuperPixel) doit être entier
     int dx = int(img.rows / sqrt(nbSuperPixel));
     int dy = int(img.cols / sqrt(nbSuperPixel));
@@ -154,19 +154,19 @@ int main(int argc, char *argv[])
         }
 
         //affichage des superpixels
-        for(auto i : sp_vec)
-        {
-            Coo c = i->getCoordonnees();
-            res.at<cv::Vec3b>(c.x, c.y) = cv::Vec3b(0,0,255);
-            res.at<cv::Vec3b>(c.x-1, c.y-1) = cv::Vec3b(0,0,255);
-            res.at<cv::Vec3b>(c.x-1, c.y) = cv::Vec3b(0,0,255);
-            res.at<cv::Vec3b>(c.x-1, c.y+1) = cv::Vec3b(0,0,255);
-            res.at<cv::Vec3b>(c.x, c.y-1) = cv::Vec3b(0,0,255);
-            res.at<cv::Vec3b>(c.x, c.y+1) = cv::Vec3b(0,0,255);
-            res.at<cv::Vec3b>(c.x+1, c.y-1) = cv::Vec3b(0,0,255);
-            res.at<cv::Vec3b>(c.x+1, c.y) = cv::Vec3b(0,0,255);
-            res.at<cv::Vec3b>(c.x+1, c.y+1) = cv::Vec3b(0,0,255);
-        }
+//        for(auto i : sp_vec)
+//        {
+//            Coo c = i->getCoordonnees();
+//            res.at<cv::Vec3b>(c.x, c.y) = cv::Vec3b(0,0,255);
+//            res.at<cv::Vec3b>(c.x-1, c.y-1) = cv::Vec3b(0,0,255);
+//            res.at<cv::Vec3b>(c.x-1, c.y) = cv::Vec3b(0,0,255);
+//            res.at<cv::Vec3b>(c.x-1, c.y+1) = cv::Vec3b(0,0,255);
+//            res.at<cv::Vec3b>(c.x, c.y-1) = cv::Vec3b(0,0,255);
+//            res.at<cv::Vec3b>(c.x, c.y+1) = cv::Vec3b(0,0,255);
+//            res.at<cv::Vec3b>(c.x+1, c.y-1) = cv::Vec3b(0,0,255);
+//            res.at<cv::Vec3b>(c.x+1, c.y) = cv::Vec3b(0,0,255);
+//            res.at<cv::Vec3b>(c.x+1, c.y+1) = cv::Vec3b(0,0,255);
+//        }
 
 
         //windows
